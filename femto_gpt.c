@@ -15,6 +15,8 @@ int vocab_size = 0;
 int token_ids[MAX_TOKENS];
 int token_count = 0;
 
+int transition_counts[MAX_VOCAB][MAX_VOCAB]; //
+
 int get_token_id(const char *word) {
     for (int i = 0; i < vocab_size; i++) {
         if (strcmp(vocab[i].word, word) == 0) {
@@ -40,6 +42,17 @@ void add_sentence(const char *sentence) {
     }
 }
 
+void build_transition_counts()
+{
+	for (int i = 0; i < token_count -1; i++)
+	{
+		int current = token_ids[i];
+		int next = token_ids[i+1];
+
+		transition_counts[current][next]++;
+	}
+}
+
 void print_vocab() {
     printf("\nVOCAB TABLE:\n");
     for (int i = 0; i < vocab_size; i++) {
@@ -61,6 +74,32 @@ void print_tokens() {
     printf("\n");
 }
 
+void print_transition_counts()
+{
+	printf("\nTRANSITION COUNTS\n\n");
+
+	for (int from = 0; from < vocab_size; from++)
+	{
+		printf("%s:\n", vocab[from].word);
+
+		for (int to = 0; to < vocab_size; to++)
+		{
+			int count = transition_counts[from][to];
+
+			if (count > 0)
+			{
+				printf(
+					"   -> %-10s : %d\n",
+					vocab[to].word,
+					count
+				);
+			}
+		}
+
+		printf("\n");
+	}
+}
+
 int main() {
     add_sentence("cat eats fish");
     add_sentence("dog eats food");
@@ -69,6 +108,10 @@ int main() {
 
     print_vocab();
     print_tokens();
+
+    build_transition_counts();
+
+    print_transition_counts();
 
     return 0;
 }
