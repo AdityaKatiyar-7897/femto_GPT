@@ -15,7 +15,9 @@ int vocab_size = 0;
 int token_ids[MAX_TOKENS];
 int token_count = 0;
 
-int transition_counts[MAX_VOCAB][MAX_VOCAB]; //
+int transition_counts[MAX_VOCAB][MAX_VOCAB]; 
+
+float probability_table[MAX_VOCAB][MAX_VOCAB];
 
 int get_token_id(const char *word) {
     for (int i = 0; i < vocab_size; i++) {
@@ -44,13 +46,38 @@ void add_sentence(const char *sentence) {
 
 void build_transition_counts()
 {
-	for (int i = 0; i < token_count -1; i++)
-	{
-		int current = token_ids[i];
-		int next = token_ids[i+1];
+    for (int i = 0; i < token_count - 1; i++)
+    {
+        int current = token_ids[i];
+        int next = token_ids[i + 1];
 
-		transition_counts[current][next]++;
-	}
+        transition_counts[current][next]++;
+    }
+}
+
+void build_probability_table()
+{
+   
+    for (int from = 0; from < vocab_size; from++)
+    {
+        int total_transitions = 0;
+
+        for (int to = 0; to < vocab_size; to++)
+        {
+            total_transitions += transition_counts[from][to];
+        }
+
+        if (total_transitions == 0)
+        {
+            continue; 
+        }
+
+        for (int to = 0; to < vocab_size; to++)
+        {
+            probability_table[from][to] = 
+                (float)transition_counts[from][to] / total_transitions;
+        }
+    }
 }
 
 void print_vocab() {
@@ -76,28 +103,54 @@ void print_tokens() {
 
 void print_transition_counts()
 {
-	printf("\nTRANSITION COUNTS\n\n");
+    printf("\nTRANSITION COUNTS\n\n");
 
-	for (int from = 0; from < vocab_size; from++)
-	{
-		printf("%s:\n", vocab[from].word);
+    for (int from = 0; from < vocab_size; from++)
+    {
+        printf("%s:\n", vocab[from].word);
 
-		for (int to = 0; to < vocab_size; to++)
-		{
-			int count = transition_counts[from][to];
+        for (int to = 0; to < vocab_size; to++)
+        {
+            int count = transition_counts[from][to];
 
-			if (count > 0)
-			{
-				printf(
-					"   -> %-10s : %d\n",
-					vocab[to].word,
-					count
-				);
-			}
-		}
+            if (count > 0)
+            {
+                printf(
+                    "   -> %-10s : %d\n",
+                    vocab[to].word,
+                    count
+                );
+            }
+        }
 
-		printf("\n");
-	}
+        printf("\n");
+    }
+}
+
+void print_probability_table()
+{
+    printf("\nPROBABILITY TABLE\n\n");
+
+    for (int from = 0; from < vocab_size; from++)
+    {
+        printf("%s:\n", vocab[from].word);
+
+        for (int to = 0; to < vocab_size; to++)
+        {
+            float probability = probability_table[from][to];
+
+            if (probability > 0.0f)
+            {
+                printf(
+                    "   -> %-10s : %.2f\n",
+                    vocab[to].word,
+                    probability
+                );
+            }
+        }
+
+        printf("\n");
+    }
 }
 
 int main() {
@@ -112,6 +165,10 @@ int main() {
     build_transition_counts();
 
     print_transition_counts();
+
+    build_probability_table();
+
+    print_probability_table();
 
     return 0;
 }
