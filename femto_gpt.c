@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <time.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,17 +33,22 @@ int get_token_id(const char *word) {
     return vocab_size - 1;
 }
 
-void add_sentence(const char *sentence) {
+void add_sentence(const char *sentence)
+{
+    token_ids[token_count++] = get_token_id("<BOS>");
+
     char buffer[256];
     strcpy(buffer, sentence);
 
     char *word = strtok(buffer, " ");
 
-    while (word != NULL) {
-        int id = get_token_id(word);
-        token_ids[token_count++] = id;
+    while (word != NULL)
+    {
+        token_ids[token_count++] = get_token_id(word);
         word = strtok(NULL, " ");
     }
+
+    token_ids[token_count++] = get_token_id("<EOS>");
 }
 
 void build_transition_counts()
@@ -57,7 +64,6 @@ void build_transition_counts()
 
 void build_probability_table()
 {
-   
     for (int from = 0; from < vocab_size; from++)
     {
         int total_transitions = 0;
@@ -78,6 +84,25 @@ void build_probability_table()
                 (float)transition_counts[from][to] / total_transitions;
         }
     }
+}
+
+int sample_next_token(int current_token)
+{
+    float r = (float)rand() / (float)RAND_MAX; 
+
+    float cumulative = 0.0f;
+
+    for (int next = 0; next < vocab_size; next++)
+    {
+        cumulative += probability_table[current_token][next];
+
+        if (r <= cumulative)
+        {
+            return next;
+        }
+    }
+
+    return -1; 
 }
 
 void print_vocab() {
@@ -153,7 +178,88 @@ void print_probability_table()
     }
 }
 
+void debug_distribution(int token_id)
+{
+    printf("\nCurrent token: %s\n", vocab[token_id].word);
+
+    for (int i = 0; i < vocab_size; i++)
+    {
+        float p = probability_table[token_id][i];
+
+        if (p > 0.0f)
+        {
+            printf(
+                "%s -> %.2f\n",
+                vocab[i].word,
+                p
+            );
+        }
+    }
+}
+
+void generate_text(const char *start_word, int max_steps)
+{
+    int current = get_token_id(start_word);
+
+    printf("\nGenerated:\n");
+    printf("%s ", vocab[current].word);
+
+    for (int step = 0; step < max_steps; step++)
+    {
+        debug_distribution(current);
+
+        int next = sample_next_token(current);
+
+        if (next == -1)
+        {
+            break;
+        }
+
+        if (strcmp(vocab[next].word, "<EOS>") == 0)
+        {
+            break;
+        }
+
+        printf("%s ", vocab[next].word);
+
+        current = next;
+    }
+
+    printf("\n");
+}
+
+void generate_from_bos(int max_steps)
+{
+    int current = get_token_id("<BOS>");
+
+    printf("\nGenerated from <BOS>:\n");
+
+    for (int step = 0; step < max_steps; step++)
+    {
+        debug_distribution(current);
+
+        int next = sample_next_token(current);
+
+        if (next == -1)
+        {
+            break;
+        }
+
+        if (strcmp(vocab[next].word, "<EOS>") == 0)
+        {
+            break;
+        }
+
+        printf("%s ", vocab[next].word);
+
+        current = next;
+    }
+
+    printf("\n");
+}
+
 int main() {
+    srand(time(NULL)); 
     add_sentence("cat eats fish");
     add_sentence("dog eats food");
     add_sentence("cat drinks milk");
@@ -170,5 +276,9 @@ int main() {
 
     print_probability_table();
 
+    generate_text("cat", 10);
+    generate_text("dog", 10);
+    generate_from_bos(10);
+    
     return 0;
 }
