@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #define MAX_VOCAB 32
 #define MAX_TOKENS 128
@@ -35,6 +36,22 @@ float embeddings[MAX_VOCAB][EMBED_DIM];
 float Wq[EMBED_DIM][HIDDEN_DIM];
 float Wk[EMBED_DIM][HIDDEN_DIM];
 float Wv[EMBED_DIM][HIDDEN_DIM];
+
+void softmax(float values[], int count)
+{
+    float sum = 0.0f;
+
+    for (int i = 0; i < count; i++)
+    {
+        values[i] = expf(values[i]);
+        sum += values[i];
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        values[i] /= sum;
+    }
+}
 
 int get_token_id(const char *word)
 {
@@ -431,17 +448,33 @@ void attention_demo()
 
     printf("\n");
 
-    printf("\nATTENTION SCORES FOR 'cat'\n\n");
+    float scores[3];
+
+    for (int j = 0; j < 3 ; j++)
+    {
+        scores[j] = dot_product(qkv[0].Q, qkv[j].K);
+    }
+
+    printf("\nRAW SCORES\n\n");
 
     for (int j = 0; j < 3; j++)
     {
-        float score = dot_product(qkv[0].Q, qkv[j].K);
+        printf(
+            "cat -> %-5s : %.3f\n", vocab[sequence[j]].word,scores[j]);
 
-        printf("cat -> %-5s : %.3f\n",
-               vocab[sequence[j]].word,
-               score);
+    }
+
+    softmax(scores, 3);
+
+    printf("\nSOFTMAX WEIGHTS\n\n");
+
+    for (int j = 0; j < 3; j++)
+    {
+        printf("cat -> %-5s : %.3f\n", vocab[sequence[j]].word, scores[j]);
     }
 }
+
+
 int main()
 {
     srand(time(NULL));
