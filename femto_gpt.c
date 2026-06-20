@@ -13,6 +13,14 @@ typedef struct {
     char word[WORD_LEN];
 } Token;
 
+typedef struct
+{
+    float Q[HIDDEN_DIM];
+    float K[HIDDEN_DIM];
+    float V[HIDDEN_DIM];
+}
+QKV;
+
 Token vocab[MAX_VOCAB];
 int vocab_size = 0;
 
@@ -326,7 +334,7 @@ void project(
     }
 }
 
-void qkv(int token_id)
+void build_qkv(int token_id)
 {
     float Q[HIDDEN_DIM];
     float K[HIDDEN_DIM];
@@ -359,6 +367,81 @@ void qkv(int token_id)
     printf("\n");
 }
 
+float dot_product(
+    float a[HIDDEN_DIM],
+    float b[HIDDEN_DIM]
+)
+{
+    float sum = 0.0f;
+
+    for (int i = 0; i < HIDDEN_DIM; i++)
+    {
+        sum += a[i] * b[i];
+    }
+
+    return sum;
+}
+
+QKV compute_qkv(int token_id)
+{
+    QKV result;
+
+    project(
+        embeddings[token_id],
+        Wq,
+        result.Q
+    );
+
+    project(
+        embeddings[token_id],
+        Wk,
+        result.K
+    );
+
+    project(
+        embeddings[token_id],
+        Wv,
+        result.V
+    );
+
+    return result;
+}
+
+void attention_demo()
+{
+    int sequence[3];
+
+    sequence[0] = get_token_id("cat");
+    sequence[1] = get_token_id("eats");
+    sequence[2] = get_token_id("fish");
+
+    QKV qkv[3];
+
+    for (int i = 0; i < 3; i++)
+    {
+        qkv[i] = compute_qkv(sequence[i]);
+    }
+
+    printf("\nSEQUENCE\n\n");
+
+    for (int i = 0; i < 3; i++)
+    {
+        printf("%s ", vocab[sequence[i]].word);
+    }
+
+    printf("\n");
+
+    printf("\nATTENTION SCORES FOR 'cat'\n\n");
+
+    for (int j = 0; j < 3; j++)
+    {
+        float score = dot_product(qkv[0].Q, qkv[j].K);
+
+        printf("cat -> %-5s : %.3f\n",
+               vocab[sequence[j]].word,
+               score);
+    }
+}
 int main()
 {
     srand(time(NULL));
@@ -390,6 +473,8 @@ int main()
 
     build_qkv(get_token_id("cat"));
     build_qkv(get_token_id("dog"));
+
+    attention_demo();
 
     return 0;
 }
