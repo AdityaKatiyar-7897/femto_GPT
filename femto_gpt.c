@@ -8,6 +8,8 @@
 #define WORD_LEN 32
 #define EMBED_DIM 4
 
+#define HIDDEN_DIM 3
+
 typedef struct {
   char word[WORD_LEN];
 } Token;
@@ -21,6 +23,19 @@ int token_count = 0;
 int transition_counts[MAX_VOCAB][MAX_VOCAB];
 float probability_table[MAX_VOCAB][MAX_VOCAB];
 float embeddings[MAX_VOCAB][EMBED_DIM];
+
+float W[EMBED_DIM][HIDDEN_DIM]; //weight matrix
+
+void initialize_weights()
+{
+    for (int row = 0; row < EMBED_DIM; row++)
+    {
+        for (int col = 0; col < HIDDEN_DIM; col++)
+        {
+            W[row][col] = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+        }
+    }
+}
 
 int get_token_id(const char *word) {
   for (int i = 0; i < vocab_size; i++) {
@@ -102,7 +117,7 @@ int sample_next_token(int current_token) {
   return -1;
 }
 
-void print_vocab() {
+/*void print_vocab() {
   printf("\nVOCAB TABLE:\n");
   for (int i = 0; i < vocab_size; i++) {
     printf("id %d -> %s\n", i, vocab[i].word);
@@ -157,7 +172,7 @@ void print_probability_table() {
 
     printf("\n");
   }
-}
+  }
 
 void print_embeddings() {
 
@@ -187,7 +202,7 @@ void debug_distribution(int token_id) {
     }
   }
 }
-
+*/
 
 
 void generate_text(const char *start_word, int max_steps) {
@@ -197,7 +212,7 @@ void generate_text(const char *start_word, int max_steps) {
   printf("%s ", vocab[current].word);
 
   for (int step = 0; step < max_steps; step++) {
-    debug_distribution(current);
+   // debug_distribution(current);
 
     int next = sample_next_token(current);
 
@@ -223,7 +238,7 @@ void generate_from_bos(int max_steps) {
   printf("\nGenerated from <BOS>:\n");
 
   for (int step = 0; step < max_steps; step++) {
-    debug_distribution(current);
+    //debug_distribution(current);
 
     int next = sample_next_token(current);
 
@@ -243,6 +258,89 @@ void generate_from_bos(int max_steps) {
   printf("\n");
 }
 
+void print_weight_matrix()
+{
+    printf("\nWEIGHT MATRIX\n\n");
+
+    for (int row = 0; row < EMBED_DIM; row++)
+    {
+        for (int col = 0; col < HIDDEN_DIM; col++)
+        {
+            printf("%8.3f ", W[row][col]);
+        }
+
+        printf("\n");
+    }
+}
+
+void project_token(int token_id)
+{
+    float output[HIDDEN_DIM];
+
+    for (int col = 0; col < HIDDEN_DIM; col++)
+    {
+        output[col] = 0.0f;
+
+        for (int row = 0; row < EMBED_DIM; row++)
+        {
+            output[col] +=
+                embeddings[token_id][row]
+                *
+                W[row][col];
+        }
+    }
+
+    printf("\nTOKEN: %s\n",
+           vocab[token_id].word);
+
+    printf("Embedding:\n");
+
+    for (int i = 0; i < EMBED_DIM; i++)
+    {
+        printf("%.3f ",
+               embeddings[token_id][i]);
+    }
+
+    printf("\n");
+
+    printf("Projected:\n");
+
+    for (int i = 0; i < HIDDEN_DIM; i++)
+    {
+        printf("%.3f ",
+               output[i]);
+    }
+
+    printf("\n");
+}
+
+void print_matmul_breakdown(int token_id)
+{
+    printf("\nMATMUL BREAKDOWN FOR %s\n\n",
+           vocab[token_id].word);
+
+    for (int col = 0; col < HIDDEN_DIM; col++)
+    {
+        printf("output[%d] = ", col);
+
+        for (int row = 0; row < EMBED_DIM; row++)
+        {
+            printf(
+                "(%.2f * %.2f)",
+                embeddings[token_id][row],
+                W[row][col]
+            );
+
+            if (row != EMBED_DIM - 1)
+            {
+                printf(" + ");
+            }
+        }
+
+        printf("\n");
+    }
+}
+
 int main() {
   srand(time(NULL));
   add_sentence("cat eats fish");
@@ -250,24 +348,39 @@ int main() {
   add_sentence("cat drinks milk");
   add_sentence("dog drinks water");
 
-  print_vocab();
-  print_tokens();
+  //print_vocab();
+  //print_tokens();
 
   build_transition_counts();
 
-  print_transition_counts();
+ // print_transition_counts();
 
   build_probability_table();
 
-  print_probability_table();
+  //print_probability_table();
 
   initialize_embeddings();
 
-  print_embeddings();
+ //print_embeddings();
+ //
+ //
 
   generate_text("cat", 10);
   generate_text("dog", 10);
   generate_from_bos(10);
+
+
+  initialize_weights();
+
+  print_weight_matrix();
+
+  project_token(get_token_id("cat"));
+
+  project_token(get_token_id("dog"));
+
+  print_matmul_breakdown(
+      get_token_id("cat")
+  );
 
   return 0;
 }
