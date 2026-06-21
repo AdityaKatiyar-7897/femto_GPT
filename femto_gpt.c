@@ -37,6 +37,8 @@ float Wq[EMBED_DIM][HIDDEN_DIM];
 float Wk[EMBED_DIM][HIDDEN_DIM];
 float Wv[EMBED_DIM][HIDDEN_DIM];
 
+float Wout[HIDDEN_DIM][MAX_VOCAB];
+
 void softmax(float values[], int count)
 {
     float sum = 0.0f;
@@ -424,6 +426,17 @@ QKV compute_qkv(int token_id)
     return result;
 }
 
+void initialize_output_matrix()
+{
+    for (int row = 0; row < HIDDEN_DIM; row++)
+    {
+        for (int col = 0; col < MAX_VOCAB; col++)
+        {
+            Wout[row][col] = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+        }
+    }
+}
+
 void attention_demo()
 {
     int sequence[3];
@@ -521,9 +534,35 @@ void attention_demo()
     }
 
     printf("\n");
+
+    float logits[MAX_VOCAB];
+
+    for (int token = 0; token < vocab_size; token++)
+    {
+        logits[token] = 0.0f;
+
+        for (int dim = 0; dim < HIDDEN_DIM; dim++)
+        {
+            logits[token] += attention_output[dim] * Wout[dim][token];
+        }
+    }
+
+    printf("\nLOGITS\n\n");
+
+    for (int token = 0; token < vocab_size; token++)
+    {
+        printf("%-10s : %.3f\n", vocab[token].word, logits[token]);
+    }
+
+    softmax(logits, vocab_size);
+
+    printf("\nNEXT TOKEN PROBABILITES\n\n");
+
+    for (int token = 0; token < vocab_size; token++)
+    {
+        printf("%-10s : %.3f\n", vocab[token].word, logits[token]);
+    }
 }
-
-
 
 int main()
 {
@@ -557,7 +596,11 @@ int main()
     build_qkv(get_token_id("cat"));
     build_qkv(get_token_id("dog"));
 
+    initialize_output_matrix();
+
+
     attention_demo();
+
 
     return 0;
 }
