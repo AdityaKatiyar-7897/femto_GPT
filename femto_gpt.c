@@ -463,7 +463,6 @@ void attention_demo()
             "cat -> %-5s : %.3f\n", vocab[sequence[j]].word,scores[j]);
 
     }
-
     softmax(scores, 3);
 
     printf("\nSOFTMAX WEIGHTS\n\n");
@@ -472,7 +471,58 @@ void attention_demo()
     {
         printf("cat -> %-5s : %.3f\n", vocab[sequence[j]].word, scores[j]);
     }
+
+    printf("\nV VECTORS\n\n");
+
+    for (int token = 0; token < 3; token++)
+    {
+        printf("%s : ", vocab[sequence[token]].word);
+
+        for (int dim = 0; dim < HIDDEN_DIM; dim++)
+        {
+            printf("%.3f ", qkv[token].V[dim]);
+        }
+
+        printf("\n");
+    }
+
+    printf("\nATTENTION MIX\n\n");
+
+    for (int token = 0; token < 3; token++)
+    {
+        printf(
+            "%.3f * V(%s)\n",
+            scores[token],
+            vocab[sequence[token]].word
+        );
+    }
+
+    float attention_output[HIDDEN_DIM];
+
+    for (int dim = 0 ; dim < HIDDEN_DIM; dim++)
+    {
+        attention_output[dim] = 0.0f;
+    }
+
+
+    for (int token = 0; token < 3; token ++)
+    {
+        for (int dim = 0; dim < HIDDEN_DIM; dim++)
+        {
+            attention_output[dim] += scores[token] * qkv[token].V[dim];
+        }
+    }
+
+    printf("\nAttention output for 'cat'\n\n");
+
+    for (int dim = 0; dim < HIDDEN_DIM; dim++)
+    {
+        printf("%.3f ", attention_output[dim]);
+    }
+
+    printf("\n");
 }
+
 
 
 int main()
