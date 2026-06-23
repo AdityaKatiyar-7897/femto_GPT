@@ -564,6 +564,80 @@ void attention_demo()
     }
 }
 
+float forward_loss(int context[], int context_len, int target_token)
+{
+    QKV qkv[8];
+
+    for (int i = 0; i < context_len; i++)
+    {
+        qkv[i] = compute_qkv(context[i]);
+    }
+
+    int query_pos = context_len - 1;
+
+    float scores[8];
+
+    for (int j = 0; j < context_len; j++)
+    {
+        scores[j] = dot_product(qkv[query_pos].Q, qkv[j].K);
+    }
+
+    softmax(scores, context_len);
+
+    float attention_output[HIDDEN_DIM];
+
+    for (int dim = 0; dim < HIDDEN_DIM; dim++)
+    {
+        attention_output[dim] = 0.0f;
+    }
+
+    for (int token = 0; token < context_len; token++)
+    {
+        for (int dim = 0; dim < HIDDEN_DIM; dim++)
+        {
+            attention_output[dim] += scores[token] * qkv[token].V[dim];
+        }
+    }
+
+    float logits[MAX_VOCAB];
+
+    for (int token = 0; token < vocab_size; token++)
+    {
+        logits[token] = 0.0f;
+
+        for (int dim = 0; dim < HIDDEN_DIM; dim++)
+        {
+            logits[token] += attention_output[dim] * Wout[dim][token];
+        }
+    }
+
+    softmax(logits, vocab_size);
+
+    float predicted_probability = logits[target_token];
+    float loss = -logf(predicted_probability + 1e-9f);
+
+    printf("\nFORWARD LOSS TEST\n\n");
+
+    printf("Context: ");
+    for (int i = 0; i < context_len; i++)
+    {
+        printf("%s ", vocab[context[i]].word);
+    }
+
+    printf("\nTarget: %s\n", vocab[target_token].word);
+
+    printf("\nPredicted probability for target: %.6f\n", predicted_probability);
+    printf("Loss: %.6f\n", loss);
+
+    printf("\nTop probabilities:\n");
+    for (int token = 0; token < vocab_size; token++)
+    {
+        printf("%-10s : %.4f\n", vocab[token].word, logits[token]);
+    }
+
+    return loss;
+}
+
 int main()
 {
     srand(time(NULL));
@@ -600,6 +674,15 @@ int main()
 
 
     attention_demo();
+
+    int context[2];
+
+    context[0] = get_token_id("cat");
+    context[1] = get_token_id("eats");
+
+    int target = get_token_id("fish");
+
+    forward_loss(context, 2, target);
 
 
     return 0;
